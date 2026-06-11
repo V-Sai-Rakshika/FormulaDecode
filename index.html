@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      FormulaDecode — Decode Ingredients. Discover What Works For You.
+    </title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="auth.css" />
+
+    <!-- Supabase JS SDK (UMD) -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>"
+    />
+  </head>
+  <body>
+    <!-- Background orbs -->
+    <div class="bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+      <div style="text-align: center">
+        <div style="font-size: 36px; margin-bottom: 16px">🧬</div>
+        <div class="loading-spinner" style="margin: 0 auto 24px"></div>
+        <div class="loading-text">Analyzing your product...</div>
+        <div class="loading-steps" id="loading-steps"></div>
+      </div>
+    </div>
+
+    <!-- Onboarding Complete Flash -->
+    <div
+      id="onboard-complete-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(5, 8, 16, 0.95);
+        z-index: 600;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 24px;
+      "
+    >
+      <div style="font-size: 64px; animation: fadeSlideIn 0.5s ease">✨</div>
+      <div style="font-size: 28px; font-weight: 800">
+        Your profile is ready!
+      </div>
+      <div style="color: var(--text-secondary)">
+        Taking you to your dashboard...
+      </div>
+    </div>
+
+    <!-- ═══ Navigation ══════════════════════════════════════════ -->
+    <nav class="nav" id="nav" style="display: none">
+      <a
+        class="nav-logo"
+        href="#"
+        onclick="
+          showPage('dashboard');
+          renderDashboard();
+        "
+      >
+        <div class="nav-logo-icon">🧬</div>
+        <div class="nav-logo-text">Formula<span>Decode</span></div>
+      </a>
+
+      <div class="nav-links">
+        <button
+          class="nav-link active"
+          data-page="dashboard"
+          onclick="
+            showPage('dashboard');
+            renderDashboard();
+          "
+        >
+          Dashboard
+        </button>
+        <button class="nav-link" data-page="scan" onclick="showPage('scan')">
+          Scan
+        </button>
+        <button
+          class="nav-link"
+          data-page="analysis"
+          onclick="showPage('analysis')"
+        >
+          Analysis
+        </button>
+        <button
+          class="nav-link"
+          data-page="compare"
+          onclick="
+            showPage('compare');
+            renderComparison();
+          "
+        >
+          Compare
+        </button>
+        <button
+          class="nav-link"
+          data-page="history"
+          onclick="
+            showPage('history');
+            renderHistory();
+          "
+        >
+          History
+        </button>
+        <!-- Profile link removed from nav — avatar handles navigation -->
+      </div>
+
+      <!-- Avatar (navigates to profile page; letter = first letter of user's name) -->
+      <div class="nav-profile" id="nav-avatar" title="My Profile">?</div>
+    </nav>
+
+    <!-- ═══ Main App Pages ══════════════════════════════════════ -->
+    <div id="app" style="display: none">
+      <!-- ── PAGE: ONBOARDING ─────────────────────────────────── -->
+      <div class="page active" id="page-onboarding">
+        <div class="onboard-page">
+          <div class="onboard-card fade-in">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 36px;
+              "
+            >
+              <div
+                style="
+                  width: 40px;
+                  height: 40px;
+                  background: linear-gradient(135deg, var(--jade), var(--sky));
+                  border-radius: 10px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 20px;
+                "
+              >
+                🧬
+              </div>
+              <div style="font-size: 20px; font-weight: 800">
+                Formula<span style="color: var(--jade)">Decode</span>
+              </div>
+            </div>
+            <div class="onboard-progress" id="onboard-progress"></div>
+            <div id="onboard-content"></div>
+            <div class="onboard-nav">
+              <button
+                class="btn btn-ghost"
+                id="onboard-back"
+                onclick="onboardBack()"
+              >
+                ← Back
+              </button>
+              <span class="onboard-counter" id="onboard-counter"></span>
+              <button class="btn btn-primary" onclick="onboardNext()">
+                Continue →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: DASHBOARD ─────────────────────────────────── -->
+      <div class="page" id="page-dashboard">
+        <!-- Hero -->
+        <div class="dashboard-hero">
+          <div>
+            <div class="dashboard-greeting">Good morning,</div>
+            <div class="dashboard-title">
+              Hey, <span id="dash-greeting-name">there</span> 👋
+            </div>
+            <div
+              style="
+                color: var(--text-secondary);
+                margin-top: 8px;
+                font-size: 15px;
+              "
+            >
+              Your skin intelligence report is ready.
+            </div>
+          </div>
+          <div class="skin-profile-mini">
+            <div class="skin-profile-mini-icon">🌿</div>
+            <div>
+              <div class="skin-profile-mini-label">Skin Type</div>
+              <div class="skin-profile-mini-type" id="dash-skin-type">
+                Combination
+              </div>
+              <div class="skin-profile-mini-tags" id="dash-concern-tags"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card fade-in fade-in-1">
+            <div class="stat-num" id="stat-scans">0</div>
+            <div class="stat-label">Products Scanned</div>
+          </div>
+          <div class="stat-card fade-in fade-in-2">
+            <div class="stat-num" id="stat-saved">0</div>
+            <div class="stat-label">Saved Products</div>
+          </div>
+          <div class="stat-card fade-in fade-in-3">
+            <div class="stat-num" id="stat-avoided">0</div>
+            <div class="stat-label">Bad Ingredients Avoided</div>
+          </div>
+          <div class="stat-card fade-in fade-in-4">
+            <div class="stat-num" id="stat-favorites">0</div>
+            <div class="stat-label">Favorites</div>
+          </div>
+        </div>
+
+        <!-- ★ Personalized Skincare Analysis CTA ★ -->
+        <div style="padding: 0 32px; margin-bottom: 32px">
+          <div
+            class="card p-24"
+            style="
+              background: linear-gradient(
+                135deg,
+                rgba(45, 218, 147, 0.06),
+                rgba(72, 198, 239, 0.06)
+              );
+              border-color: rgba(45, 218, 147, 0.2);
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
+                flex-wrap: wrap;
+              "
+            >
+              <div>
+                <div
+                  style="font-size: 18px; font-weight: 800; margin-bottom: 6px"
+                >
+                  ✨ Get Personalized Skincare Analysis
+                </div>
+                <div
+                  style="
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                    line-height: 1.6;
+                    max-width: 480px;
+                  "
+                >
+                  Answer 36 questions about your skin and get AI-powered
+                  ingredient analysis tailored exactly to your skin type,
+                  concerns, and sensitivities.
+                </div>
+              </div>
+              <button
+                class="personalized-cta-btn"
+                onclick="handlePersonalizedCTA()"
+              >
+                🔬 Start Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="padding: 0 32px; margin-bottom: 8px">
+          <div class="section-title">Quick <span>Actions</span></div>
+        </div>
+        <div class="quick-actions">
+          <div
+            class="quick-action qa-scan fade-in fade-in-1"
+            onclick="
+              showPage('scan');
+              switchScanTab('image');
+            "
+          >
+            <div class="quick-action-icon">📸</div>
+            <div>
+              <div class="quick-action-title">Scan Product Image</div>
+              <div class="quick-action-sub">
+                Upload or take a photo of your product label
+              </div>
+            </div>
+          </div>
+          <div
+            class="quick-action qa-text fade-in fade-in-2"
+            onclick="
+              showPage('scan');
+              switchScanTab('text');
+            "
+          >
+            <div class="quick-action-icon">📋</div>
+            <div>
+              <div class="quick-action-title">Paste Ingredients</div>
+              <div class="quick-action-sub">
+                Copy-paste the ingredient list for instant analysis
+              </div>
+            </div>
+          </div>
+          <div
+            class="quick-action qa-compare fade-in fade-in-3"
+            onclick="
+              showPage('compare');
+              renderComparison();
+            "
+          >
+            <div class="quick-action-icon">⚖️</div>
+            <div>
+              <div class="quick-action-title">Compare Products</div>
+              <div class="quick-action-sub">
+                Side-by-side comparison of up to 5 products
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent + Routine -->
+        <div class="recent-grid">
+          <div class="card p-24 fade-in fade-in-2">
+            <div class="section-header" style="margin-bottom: 16px">
+              <div class="section-title" style="font-size: 16px">
+                Recent <span>Scans</span>
+              </div>
+              <button
+                class="btn btn-ghost btn-sm"
+                onclick="
+                  showPage('history');
+                  renderHistory();
+                "
+              >
+                View All
+              </button>
+            </div>
+            <div id="recent-scans"></div>
+          </div>
+          <div class="routine-card fade-in fade-in-3">
+            <div class="section-header" style="margin-bottom: 8px">
+              <div class="section-title" style="font-size: 16px">
+                Routine <span>Check</span>
+              </div>
+              <span class="badge badge-green">AM/PM</span>
+            </div>
+            <div
+              style="
+                font-size: 12px;
+                color: var(--text-muted);
+                margin-bottom: 12px;
+              "
+            >
+              Compatibility with your skin profile
+            </div>
+            <div id="routine-list"></div>
+          </div>
+        </div>
+
+        <!-- Skin Alert -->
+        <div style="padding: 0 32px 48px">
+          <div
+            class="card p-24"
+            style="
+              background: linear-gradient(
+                135deg,
+                rgba(255, 107, 107, 0.08),
+                rgba(245, 166, 35, 0.08)
+              );
+              border-color: rgba(255, 107, 107, 0.2);
+            "
+          >
+            <div style="display: flex; align-items: flex-start; gap: 16px">
+              <div style="font-size: 28px">⚠️</div>
+              <div>
+                <div style="font-weight: 700; margin-bottom: 4px">
+                  Fragrance Sensitivity Alert
+                </div>
+                <div
+                  style="
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                    line-height: 1.6;
+                  "
+                >
+                  Based on your profile, 2 recently scanned products contain
+                  <strong style="color: var(--coral)">Fragrance</strong> — a
+                  known irritant for sensitive skin. We recommend switching to
+                  fragrance-free alternatives.
+                </div>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  style="margin-top: 12px"
+                  onclick="
+                    showPage('history');
+                    renderHistory();
+                  "
+                >
+                  View Flagged Products →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: SCAN ───────────────────────────────────────── -->
+      <div class="page" id="page-scan">
+        <div class="scan-hero">
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              padding: 6px 16px;
+              border-radius: 100px;
+              background: var(--jade-faint);
+              border: 1px solid var(--border-glow);
+              margin-bottom: 16px;
+            "
+          >
+            <span
+              style="
+                width: 6px;
+                height: 6px;
+                background: var(--jade);
+                border-radius: 50%;
+                animation: pulse 1.5s infinite;
+              "
+            ></span>
+            <span
+              style="
+                font-size: 12px;
+                color: var(--jade);
+                font-family: var(--font-mono);
+              "
+              >AI-Powered Analysis</span
+            >
+          </div>
+          <div class="scan-hero-title">
+            Decode Your <span class="glow-text">Product</span>
+          </div>
+          <div class="scan-hero-sub">
+            Upload an image, scan with camera, or paste the ingredient list
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 0 32px 24px">
+          <div class="upload-tabs">
+            <button
+              class="upload-tab active"
+              data-tab="image"
+              onclick="switchScanTab('image')"
+            >
+              📸 Image / Camera
+            </button>
+            <button
+              class="upload-tab"
+              data-tab="text"
+              onclick="switchScanTab('text')"
+            >
+              📋 Paste Text
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Panel -->
+        <div
+          id="scan-image-panel"
+          style="padding: 0 32px 48px; max-width: 680px; margin: 0 auto"
+        >
+          <div
+            id="scan-preview-section"
+            style="display: none; margin-bottom: 24px"
+          >
+            <div class="scan-container card">
+              <div class="scan-line"></div>
+              <div class="scan-overlay"></div>
+              <img
+                id="uploaded-preview"
+                style="
+                  width: 100%;
+                  max-height: 300px;
+                  object-fit: contain;
+                  display: block;
+                  border-radius: var(--radius-lg);
+                "
+              />
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 16px">
+              <button
+                class="btn btn-primary"
+                style="flex: 1"
+                onclick="analyzeScan()"
+              >
+                🔬 Analyze Ingredients
+              </button>
+              <button class="btn btn-ghost" onclick="resetScan()">
+                Retake
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="upload-zone"
+            id="upload-zone"
+            ondragover="handleDragOver(event)"
+            ondragleave="handleDragLeave()"
+            ondrop="handleDrop(event)"
+            onclick="document.getElementById('file-input').click()"
+          >
+            <input
+              type="file"
+              id="file-input"
+              accept="image/*"
+              style="display: none"
+              onchange="handleFileSelect(event)"
+            />
+            <div style="font-size: 48px; margin-bottom: 16px">📸</div>
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px">
+              Drop your product image here
+            </div>
+            <div
+              style="
+                font-size: 14px;
+                color: var(--text-secondary);
+                margin-bottom: 24px;
+              "
+            >
+              or click to browse from gallery
+            </div>
+            <div
+              style="
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                flex-wrap: wrap;
+              "
+            >
+              <span class="badge badge-green">✓ JPG / PNG / WEBP</span>
+              <span class="badge badge-blue">✓ OCR Extraction</span>
+              <span class="badge badge-purple">✓ AI Analysis</span>
+            </div>
+          </div>
+
+          <div class="divider-label mt-24">or try a demo product</div>
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 12px;
+              margin-top: 16px;
+            "
+          >
+            <div
+              class="card p-16"
+              style="text-align: center; cursor: pointer"
+              onclick="loadDemoProduct(0)"
+            >
+              <div style="font-size: 28px; margin-bottom: 8px">🧪</div>
+              <div style="font-size: 12px; font-weight: 700">
+                Niacinamide 10%
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted)">
+                The Ordinary
+              </div>
+            </div>
+            <div
+              class="card p-16"
+              style="text-align: center; cursor: pointer"
+              onclick="loadDemoProduct(1)"
+            >
+              <div style="font-size: 28px; margin-bottom: 8px">✨</div>
+              <div style="font-size: 12px; font-weight: 700">Glow Serum</div>
+              <div style="font-size: 11px; color: var(--text-muted)">
+                Dot & Key
+              </div>
+            </div>
+            <div
+              class="card p-16"
+              style="text-align: center; cursor: pointer"
+              onclick="loadDemoProduct(2)"
+            >
+              <div style="font-size: 28px; margin-bottom: 8px">🌿</div>
+              <div style="font-size: 12px; font-weight: 700">
+                Vitamin Face Oil
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted)">
+                The Inkey List
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Panel -->
+        <div
+          id="scan-text-panel"
+          style="
+            display: none;
+            padding: 0 32px 48px;
+            max-width: 680px;
+            margin: 0 auto;
+          "
+        >
+          <div class="card p-24">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 8px">
+              Paste Ingredient List
+            </div>
+            <div
+              style="
+                font-size: 13px;
+                color: var(--text-secondary);
+                margin-bottom: 16px;
+                line-height: 1.5;
+              "
+            >
+              Copy the full ingredient list from the product packaging or
+              website and paste it below.
+            </div>
+            <textarea
+              class="ingredients-textarea"
+              id="ingredient-text-input"
+              placeholder="e.g. Aqua, Niacinamide, Zinc PCA, Glycerin, Dimethicone, Panthenol, Lactic Acid, Fragrance..."
+            ></textarea>
+            <div
+              style="
+                margin-top: 16px;
+                padding: 12px 16px;
+                background: var(--bg-surface);
+                border-radius: var(--radius-md);
+              "
+            >
+              <div
+                style="
+                  font-size: 12px;
+                  font-weight: 700;
+                  margin-bottom: 6px;
+                  color: var(--jade);
+                "
+              >
+                💡 Pro Tip
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--text-secondary);
+                  line-height: 1.5;
+                "
+              >
+                Ingredients are usually listed in descending order of
+                concentration. The first 5–7 ingredients make up ~80% of the
+                formula.
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 20px">
+              <button
+                class="btn btn-primary"
+                style="flex: 1"
+                onclick="analyzeText()"
+              >
+                🔬 Analyze Ingredients
+              </button>
+              <button
+                class="btn btn-ghost"
+                onclick="
+                  document.getElementById('ingredient-text-input').value = ''
+                "
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div style="margin-top: 16px">
+            <div
+              style="
+                font-size: 12px;
+                color: var(--text-muted);
+                font-family: var(--font-mono);
+                margin-bottom: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+              "
+            >
+              Try an example
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                class="card p-16"
+                style="cursor: pointer"
+                onclick="pasteExample(0)"
+              >
+                <div
+                  style="font-size: 13px; font-weight: 700; margin-bottom: 4px"
+                >
+                  Good formula example 🟢
+                </div>
+                <div
+                  style="
+                    font-size: 12px;
+                    color: var(--text-muted);
+                    font-family: var(--font-mono);
+                  "
+                >
+                  Niacinamide, Zinc PCA, Glycerin, Ceramides, Panthenol...
+                </div>
+              </div>
+              <div
+                class="card p-16"
+                style="cursor: pointer"
+                onclick="pasteExample(1)"
+              >
+                <div
+                  style="font-size: 13px; font-weight: 700; margin-bottom: 4px"
+                >
+                  Flagged ingredients example 🔴
+                </div>
+                <div
+                  style="
+                    font-size: 12px;
+                    color: var(--text-muted);
+                    font-family: var(--font-mono);
+                  "
+                >
+                  Aqua, Sodium Lauryl Sulfate, Fragrance, Alcohol Denat.,
+                  Parabens...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: ANALYSIS ──────────────────────────────────── -->
+      <div class="page" id="page-analysis">
+        <div class="analysis-hero">
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick="showPage('scan')"
+            style="margin-bottom: 16px"
+          >
+            ← Back to Scan
+          </button>
+          <div class="product-header" id="product-header"></div>
+        </div>
+        <div class="analysis-grid" id="analysis-grid"></div>
+      </div>
+
+      <!-- ── PAGE: COMPARE ───────────────────────────────────── -->
+      <div class="page" id="page-compare">
+        <div style="padding: 32px 32px 24px">
+          <div class="section-title">Product <span>Comparison</span></div>
+          <div
+            style="
+              font-size: 13px;
+              color: var(--text-secondary);
+              margin-top: 4px;
+            "
+          >
+            Side-by-side ingredient and score comparison
+          </div>
+        </div>
+        <div style="padding: 0 32px 48px; overflow-x: auto">
+          <div class="compare-table" id="compare-table"></div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: HISTORY ───────────────────────────────────── -->
+      <div class="page" id="page-history">
+        <div style="padding: 32px 32px 0">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Scan <span>History</span></div>
+              <div
+                style="
+                  font-size: 13px;
+                  color: var(--text-secondary);
+                  margin-top: 4px;
+                "
+              >
+                All your analyzed products
+              </div>
+            </div>
+            <input
+              class="input"
+              style="max-width: 240px; font-size: 13px"
+              placeholder="🔍 Search products..."
+              oninput="filterHistory(this.value)"
+            />
+          </div>
+        </div>
+        <div style="padding: 24px 32px">
+          <div
+            class="section-title"
+            style="font-size: 15px; margin-bottom: 16px"
+          >
+            Recent <span>Scans</span>
+          </div>
+          <div id="history-grid"></div>
+        </div>
+        <div style="padding: 0 32px 48px">
+          <div
+            class="section-title"
+            style="font-size: 15px; margin-bottom: 16px"
+          >
+            Saved <span>Products</span>
+          </div>
+          <div class="saved-grid" id="saved-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── PAGE: PROFILE ───────────────────────────────────── -->
+      <div class="page" id="page-profile">
+        <!-- Profile Header -->
+        <div style="padding: 32px 32px 24px">
+          <div class="section-title">My <span>Profile</span></div>
+        </div>
+
+        <!-- Auth info card -->
+        <div style="padding: 0 32px; margin-bottom: 24px">
+          <div class="card p-24">
+            <div class="profile-auth-row">
+              <div class="profile-user-info">
+                <div class="profile-avatar-lg" id="profile-avatar">?</div>
+                <div>
+                  <div
+                    style="font-size: 20px; font-weight: 800"
+                    id="profile-name"
+                  >
+                    Loading...
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      color: var(--text-secondary);
+                      margin-top: 2px;
+                    "
+                    id="profile-email"
+                  >
+                    —
+                  </div>
+                  <div
+                    style="
+                      margin-top: 8px;
+                      display: flex;
+                      gap: 8px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <span class="badge badge-green" id="profile-skin-type-badge"
+                      >Combination Skin</span
+                    >
+                    <span class="badge badge-blue" id="profile-goal-badge"
+                      >Hydration</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  align-items: flex-end;
+                "
+              >
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="restartOnboarding()"
+                >
+                  ✏️ Edit Skin Profile
+                </button>
+                <button class="btn-signout" onclick="signOut()">
+                  ⇤ Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="padding: 0 32px; margin-bottom: 24px">
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 12px;
+            "
+          >
+            <div class="stat-card">
+              <div class="stat-num" id="profile-stat-scans">0</div>
+              <div class="stat-label">Scans</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" id="profile-stat-saved">0</div>
+              <div class="stat-label">Saved</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" id="profile-stat-avoided">0</div>
+              <div class="stat-label">Avoided</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" id="profile-stat-favorites">0</div>
+              <div class="stat-label">Favorites</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile detail columns -->
+        <section
+          class="profile-cols"
+          style="
+            padding: 0 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+          "
+        >
+          <!-- Left col -->
+          <div class="profile-col">
+            <div class="card p-24">
+              <div class="profile-block-head">
+                <div>
+                  <div class="profile-block-label">Skin Profile</div>
+                  <div class="profile-block-sub">
+                    Based on your onboarding answers
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 12px;
+                  margin-top: 16px;
+                "
+              >
+                <div class="profile-mini-stat">
+                  <div class="profile-mini-label">Skin Type</div>
+                  <div class="profile-mini-val" id="profile-skin-type">
+                    Combination
+                  </div>
+                </div>
+                <div class="profile-mini-stat">
+                  <div class="profile-mini-label">Sensitivity</div>
+                  <div class="profile-mini-val" id="profile-sensitivity-level">
+                    Moderate
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 16px">
+                <div class="profile-block-sub" style="margin-bottom: 8px">
+                  Top Concerns
+                </div>
+                <div class="profile-chip-wrap" id="profile-concerns"></div>
+              </div>
+              <div style="margin-top: 16px">
+                <div class="profile-block-sub" style="margin-bottom: 8px">
+                  Sensitivities
+                </div>
+                <div class="profile-chip-wrap" id="profile-sensitivities"></div>
+              </div>
+            </div>
+
+            <div class="card p-24" style="margin-top: 16px">
+              <div class="profile-block-head">
+                <div>
+                  <div class="profile-block-label">Ingredient Watch List</div>
+                  <div class="profile-block-sub">
+                    Ingredients to avoid based on your profile
+                  </div>
+                </div>
+              </div>
+              <div
+                class="profile-chip-wrap"
+                style="margin-top: 12px"
+                id="profile-avoid-tags"
+              >
+                <span class="badge badge-red">Fragrance</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right col -->
+          <div class="profile-col">
+            <div class="card p-24">
+              <div class="profile-block-head">
+                <div>
+                  <div class="profile-block-label">Routine Compatibility</div>
+                  <div class="profile-block-sub">
+                    Quick summary of what generally works best for you
+                  </div>
+                </div>
+              </div>
+              <div class="compat-list">
+                <div class="compat-item">
+                  <div class="compat-icon good">✓</div>
+                  <div>
+                    <div class="compat-title">Works Well</div>
+                    <div class="compat-text">
+                      Niacinamide, Zinc PCA, Ceramides, Azelaic Acid, Panthenol
+                    </div>
+                  </div>
+                </div>
+                <div class="compat-item">
+                  <div class="compat-icon warn">!</div>
+                  <div>
+                    <div class="compat-title">Use Carefully</div>
+                    <div class="compat-text">
+                      Retinol, strong exfoliants, high-strength Vitamin C
+                    </div>
+                  </div>
+                </div>
+                <div class="compat-item">
+                  <div class="compat-icon bad">×</div>
+                  <div>
+                    <div class="compat-title">Avoid if Possible</div>
+                    <div class="compat-text">
+                      Fragrance-heavy formulas, harsh sulfates, drying
+                      alcohol-heavy products
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card p-24" style="margin-top: 16px">
+              <div class="profile-block-head">
+                <div>
+                  <div class="profile-block-label">Ingredient Blacklist</div>
+                  <div class="profile-block-sub">
+                    Products containing these ingredients will be flagged
+                  </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="addToBlacklist()">
+                  + Add
+                </button>
+              </div>
+              <div
+                class="profile-chip-wrap"
+                id="blacklist-tags"
+                style="margin-top: 12px"
+              >
+                <span class="badge badge-red">Sodium Lauryl Sulfate</span>
+                <span class="badge badge-red">Fragrance</span>
+                <span class="badge badge-amber">Alcohol Denat.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Preferences -->
+        <section class="card p-24" style="margin: 0 32px 24px">
+          <div class="profile-block-head">
+            <div>
+              <div class="profile-block-label">Preferences</div>
+              <div class="profile-block-sub">
+                Manage your app experience and analysis preferences
+              </div>
+            </div>
+          </div>
+          <div class="preferences-list">
+            <div class="preference-row">
+              <div>
+                <div class="preference-title">Fragrance alerts</div>
+                <div class="preference-sub">
+                  Warn me when scanned products contain fragrance
+                </div>
+              </div>
+              <label class="switch"
+                ><input type="checkbox" checked /><span class="slider"></span
+              ></label>
+            </div>
+            <div class="preference-row">
+              <div>
+                <div class="preference-title">High-risk ingredient alerts</div>
+                <div class="preference-sub">
+                  Highlight ingredients that may irritate your skin type
+                </div>
+              </div>
+              <label class="switch"
+                ><input type="checkbox" checked /><span class="slider"></span
+              ></label>
+            </div>
+            <div class="preference-row">
+              <div>
+                <div class="preference-title">Personalized alternatives</div>
+                <div class="preference-sub">
+                  Show safer alternatives based on your skin profile
+                </div>
+              </div>
+              <label class="switch"
+                ><input type="checkbox" checked /><span class="slider"></span
+              ></label>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Theme Switcher ───────────────────────────────────── -->
+        <section class="card p-24" style="margin: 0 32px 48px">
+          <div class="profile-block-head" style="margin-bottom: 20px">
+            <div>
+              <div class="profile-block-label">App Theme</div>
+              <div class="profile-block-sub">
+                Choose how FormulaDecode looks and feels
+              </div>
+            </div>
+          </div>
+          <div
+            id="theme-picker"
+            style="display: flex; flex-wrap: wrap; gap: 10px"
+          ></div>
+        </section>
+      </div>
+      <!-- /page-profile -->
+    </div>
+    <!-- /#app -->
+
+    <!-- /#app -->
+    <style>
+      .fd-theme-btn {
+        padding: 9px 18px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-family: var(--font-display);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        white-space: nowrap;
+      }
+      .fd-theme-btn:hover {
+        border-color: var(--jade);
+        color: var(--text-primary);
+        background: var(--jade-faint);
+      }
+      .fd-theme-btn.active {
+        background: var(--jade-faint);
+        border-color: var(--jade);
+        color: var(--jade);
+        box-shadow: 0 0 0 1px var(--jade);
+      }
+    </style>
+
+    <script>
+      (function () {
+        const THEMES = [
+          "aurora",
+          "autumn",
+          "sakura",
+          "velvet",
+          "cosmic",
+          "ocean",
+        ];
+        const STORAGE_KEY = "fd-theme";
+        const LABELS = {
+          aurora: "⚡ Aurora Tech",
+          autumn: "🍂 Autumn Scholar",
+          sakura: "🌸 Sakura Bloom",
+          velvet: "✦ Velvet Luxury",
+          cosmic: "🔮 Cosmic Purple",
+          ocean: "🌊 Ocean Glass",
+        };
+        function setTheme(name) {
+          name === "aurora"
+            ? document.documentElement.removeAttribute("data-theme")
+            : document.documentElement.setAttribute("data-theme", name);
+          try {
+            localStorage.setItem(STORAGE_KEY, name);
+          } catch (_) {}
+          document.dispatchEvent(
+            new CustomEvent("fd:themechange", { detail: { theme: name } }),
+          );
+        }
+        function getTheme() {
+          return (
+            document.documentElement.getAttribute("data-theme") || "aurora"
+          );
+        }
+        function renderPicker() {
+          const container = document.getElementById("theme-picker");
+          if (!container) return;
+          container.innerHTML = THEMES.map(
+            (t) =>
+              `<button class="fd-theme-btn" data-theme-pick="${t}">${LABELS[t]}</button>`,
+          ).join("");
+          function refreshActive() {
+            const current = getTheme();
+            container.querySelectorAll(".fd-theme-btn").forEach((btn) => {
+              btn.classList.toggle("active", btn.dataset.themePick === current);
+            });
+          }
+          container.addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-theme-pick]");
+            if (btn) setTheme(btn.dataset.themePick);
+          });
+          document.addEventListener("fd:themechange", refreshActive);
+          refreshActive();
+        }
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved && THEMES.includes(saved)) setTheme(saved);
+        } catch (_) {}
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", renderPicker);
+        } else {
+          renderPicker();
+        }
+      })();
+    </script>
+
+    <!-- ═══ Chat FAB & Modal ═══════════════════════════════════ -->
+    <button class="chat-fab" id="chat-fab" onclick="openChatModal()">💬</button>
+
+    <div class="chat-modal" id="chat-modal">
+      <div class="chat-header">
+        <div class="chat-header-title">
+          <div class="chat-ai-avatar">🧬</div>
+          <div>
+            <div style="font-size: 14px; font-weight: 700">FormulaAI</div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--jade);
+                font-family: var(--font-mono);
+              "
+            >
+              ● Online
+            </div>
+          </div>
+        </div>
+        <button
+          class="btn btn-ghost btn-sm btn-icon"
+          onclick="closeChatModal()"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input
+          class="input"
+          id="chat-input"
+          placeholder="Ask about ingredients, your skin..."
+          onkeydown="handleChatKeydown(event)"
+          style="font-size: 13px"
+        />
+        <button class="btn btn-primary btn-sm" onclick="sendChat()">
+          Send
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══ Scripts ══════════════════════════════════════════════ -->
+    <script src="config.js"></script>
+    <script src="data.js"></script>
+    <script src="auth.js"></script>
+    <script src="auth-ui.js"></script>
+    <script src="groq-chat.js"></script>
+    <script src="script.js"></script>
+
+    <script>
+      // ── Bridge helpers (inline in HTML) ─────────────────────
+
+      function resetScan() {
+        document.getElementById("uploaded-preview").style.display = "none";
+        document.getElementById("scan-preview-section").style.display = "none";
+        document.getElementById("upload-zone").style.display = "block";
+        document.getElementById("file-input").value = "";
+      }
+
+      function loadDemoProduct(idx) {
+        showLoading([
+          "📸 Loading product...",
+          "🧬 Extracting ingredients...",
+          "🤖 Analyzing formula...",
+          "📊 Building report...",
+        ]);
+        setTimeout(() => {
+          hideLoading();
+          DD.state.currentProduct = DD.products[idx];
+          showPage("analysis");
+          renderAnalysis(DD.products[idx]);
+        }, 2500);
+      }
+
+      function pasteExample(idx) {
+        const examples = [
+          "Aqua, Niacinamide, Zinc PCA, Glycerin, Ceramide NP, Ceramide AP, Ceramide EOP, Panthenol, Hyaluronic Acid, Lactic Acid, Tocopherol",
+          "Aqua, Sodium Lauryl Sulfate, Alcohol Denat., Fragrance, Parabens, Sodium Chloride, Polyethylene Glycol",
+        ];
+        document.getElementById("ingredient-text-input").value = examples[idx];
+      }
+
+      function toggleFavCurrent() {
+        const p = DD.state.currentProduct;
+        if (!p) return;
+        const btn = event.target;
+        const idx = DD.state.favorites.indexOf(p.id);
+        if (idx >= 0) {
+          DD.state.favorites.splice(idx, 1);
+          btn.textContent = "🤍 Save";
+        } else {
+          DD.state.favorites.push(p.id);
+          btn.textContent = "❤️ Saved!";
+        }
+      }
+
+      function restartOnboarding() {
+        // Redirect to onboarding (edit skin profile)
+        document.getElementById("nav").style.display = "none";
+        showPage("onboarding");
+        initOnboarding();
+        // Override completeOnboarding to use the DB-saving version
+        window.completeOnboarding = window.completeOnboardingWithSave;
+      }
+
+      function addToBlacklist() {
+        const name = prompt("Enter ingredient name to blacklist:");
+        if (name && name.trim()) {
+          const el = document.getElementById("blacklist-tags");
+          el.innerHTML += `<span class="badge badge-red">${name.trim()}</span>`;
+          // Optionally persist to DB
+          if (FD_Auth?.isLoggedIn()) {
+            supabase
+              ?.from("ingredient_blacklist")
+              .insert({
+                user_id: FD_Auth.currentUser.id,
+                ingredient_name: name.trim(),
+              })
+              .then(() => {});
+          }
+        }
+      }
+
+      // ── Override completeOnboarding globally ─────────────────
+      // Must run after all scripts load
+      document.addEventListener("DOMContentLoaded", () => {
+        // Point the onboarding "complete" step to the DB-saving version
+        window.completeOnboarding = window.completeOnboardingWithSave;
+
+        // ── App Init ─────────────────────────────────────────
+        initAuth(); // in auth.js — handles session check + routing
+      });
+    </script>
+  </body>
+</html>
